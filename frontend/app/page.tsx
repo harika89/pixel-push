@@ -172,9 +172,50 @@ export default function Home() {
                     type="button"
                     disabled={!isFormValid}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-12 py-4 font-bold text-white shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
-                    onClick={() => {
-                      console.log({ email, fileName: file?.name });
-                      alert("Submit clicked (mock). Next step: call backend API.");
+                    onClick={async () => {
+                      if (!file) return;
+
+                      try {
+                        const response = await fetch("/api/create-upload", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            email,
+                            filename: file.name,
+                            contentType: file.type,
+                          }),
+                        });
+
+                        const data = await response.json();
+
+                        if(!response.ok) {
+                          throw new Error(data.error || "Failed to create upload job");
+                        }
+
+                        console.log("Upload Job:", data);
+
+                        //upload file directly to s3
+
+                        const uploadResponse = await fetch(data.uploadUrl,{
+                          method: "PUT",
+                          headers: {
+                            "Content-Type": file.type,
+                          },
+                          body: file,
+                        } );
+
+
+                        if(!uploadResponse.ok){
+                          throw new Error("Upload to S3 Failed");
+                        }
+
+                        alert("Upload Succesful");
+                      } catch (error) {
+                        console.error("Failed to create upload job:", error);
+                        alert("Upload failed. Check console.");
+                      }
                     }}
                   >
                     <span className="text-base font-bold text-white">Submit</span>
